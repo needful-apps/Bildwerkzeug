@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bildwerkzeug - Bildbearbeitung</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>🖼️ Bildwerkzeug</h1>
+                    <p>Bilder per Drag & Drop bearbeiten</p>
+                </div>
+                <nav class="header-nav">
+                    <span class="user-info">👤 {{ current_user.username }}</span>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('admin_panel') }}" class="nav-link">⚙️ Admin</a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="nav-link">🚪 Abmelden</a>
+                </nav>
+            </div>
+        </header>
+
+        <main>
+            <!-- Drop Zone -->
+            <div id="dropzone" class="dropzone">
+                <div class="dropzone-content">
+                    <span class="dropzone-icon">📁</span>
+                    <p>Bilder hierher ziehen oder klicken zum Auswählen</p>
+                    <p class="dropzone-hint">Mehrere Bilder möglich</p>
+                    <input type="file" id="fileInput" accept="image/*" multiple hidden>
+                </div>
+            </div>
+
+            <!-- Bildvorschau und Bearbeitung -->
+            <div id="editor" class="editor hidden">
+                <div class="editor-layout">
+                    <!-- Seitenleiste mit Werkzeugen -->
+                    <aside class="sidebar">
+                        <h2>Werkzeuge</h2>
+                        
+                        <!-- Größe ändern -->
+                        <div class="tool-section">
+                            <h3>📐 Größe ändern</h3>
+                            
+                            <!-- Resize Tabs -->
+                            <div class="resize-tabs">
+                                <button class="resize-tab active" onclick="switchResizeTab('pixel')">Pixel</button>
+                                <button class="resize-tab" onclick="switchResizeTab('percent')">Prozent</button>
+                                <button class="resize-tab" onclick="switchResizeTab('maxsize')">Max MB</button>
+                            </div>
+                            
+                            <!-- Pixel Tab -->
+                            <div id="resizePixel" class="resize-content active">
+                                <div class="input-group">
+                                    <label>Breite (px):</label>
+                                    <input type="number" id="resizeWidth" min="1" max="10000">
+                                </div>
+                                <div class="input-group">
+                                    <label>Höhe (px):</label>
+                                    <input type="number" id="resizeHeight" min="1" max="10000">
+                                </div>
+                                <div class="input-group checkbox">
+                                    <input type="checkbox" id="keepAspect" checked>
+                                    <label for="keepAspect">Seitenverhältnis beibehalten</label>
+                                </div>
+                                <button onclick="resize()" class="btn">Größe ändern</button>
+                            </div>
+                            
+                            <!-- Prozent Tab -->
+                            <div id="resizePercent" class="resize-content">
+                                <div class="input-group">
+                                    <label>Skalierung:</label>
+                                    <input type="range" id="scalePercent" min="1" max="200" value="100">
+                                    <span id="scalePercentValue">100</span>%
+                                </div>
+                                <div class="scale-presets">
+                                    <button onclick="setScalePercent(25)" class="btn btn-small">25%</button>
+                                    <button onclick="setScalePercent(50)" class="btn btn-small">50%</button>
+                                    <button onclick="setScalePercent(75)" class="btn btn-small">75%</button>
+                                    <button onclick="setScalePercent(150)" class="btn btn-small">150%</button>
+                                </div>
+                                <button onclick="resizeByPercent()" class="btn">Skalieren</button>
+                            </div>
+                            
+                            <!-- Max MB Tab -->
+                            <div id="resizeMaxSize" class="resize-content">
+                                <div class="input-group">
+                                    <label>Maximale Dateigröße (MB):</label>
+                                    <input type="number" id="maxFileSizeMB" min="0.1" max="50" step="0.1" value="1">
+                                </div>
+                                <div class="input-group">
+                                    <label>Format:</label>
+                                    <select id="maxSizeFormat">
+                                        <option value="jpeg">JPEG (kleinste Größe)</option>
+                                        <option value="webp">WebP (gute Kompression)</option>
+                                        <option value="png">PNG (verlustfrei)</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Qualität:</label>
+                                    <input type="range" id="maxSizeQuality" min="10" max="95" value="85">
+                                    <span id="maxSizeQualityValue">85</span>
+                                </div>
+                                <button onclick="resizeToMaxSize()" class="btn">Auf Max-Größe komprimieren</button>
+                                <p class="info-text" id="currentSizeInfo"></p>
+                            </div>
+                        </div>
+
+                        <!-- Drehen & Spiegeln -->
+                        <div class="tool-section">
+                            <h3>🔄 Drehen & Spiegeln</h3>
+                            <div class="button-group">
+                                <button onclick="rotate(90)" class="btn btn-small">↻ 90°</button>
+                                <button onclick="rotate(-90)" class="btn btn-small">↺ -90°</button>
+                                <button onclick="rotate(180)" class="btn btn-small">180°</button>
+                            </div>
+                            <div class="button-group">
+                                <button onclick="flip('horizontal')" class="btn btn-small">↔ Horizontal</button>
+                                <button onclick="flip('vertical')" class="btn btn-small">↕ Vertikal</button>
+                            </div>
+                        </div>
+
+                        <!-- Filter -->
+                        <div class="tool-section">
+                            <h3>🎨 Filter</h3>
+                            <button onclick="applyFilter('grayscale')" class="btn">Graustufen</button>
+                            
+                            <div class="input-group">
+                                <label>Unschärfe:</label>
+                                <input type="range" id="blurRadius" min="0" max="20" value="2" step="0.5">
+                                <span id="blurValue">2</span>
+                            </div>
+                            <button onclick="blur()" class="btn">Weichzeichnen</button>
+                            
+                            <div class="input-group">
+                                <label>Schärfe:</label>
+                                <input type="range" id="sharpenFactor" min="0" max="5" value="2" step="0.1">
+                                <span id="sharpenValue">2</span>
+                            </div>
+                            <button onclick="sharpen()" class="btn">Schärfen</button>
+                        </div>
+
+                        <!-- Anpassungen -->
+                        <div class="tool-section">
+                            <h3>⚡ Anpassungen</h3>
+                            
+                            <div class="input-group">
+                                <label>Helligkeit:</label>
+                                <input type="range" id="brightness" min="0" max="2" value="1" step="0.1">
+                                <span id="brightnessValue">1.0</span>
+                            </div>
+                            <button onclick="adjustBrightness()" class="btn">Anwenden</button>
+                            
+                            <div class="input-group">
+                                <label>Kontrast:</label>
+                                <input type="range" id="contrast" min="0" max="3" value="1" step="0.1">
+                                <span id="contrastValue">1.0</span>
+                            </div>
+                            <button onclick="adjustContrast()" class="btn">Anwenden</button>
+                            
+                            <div class="input-group">
+                                <label>Sättigung:</label>
+                                <input type="range" id="saturation" min="0" max="3" value="1" step="0.1">
+                                <span id="saturationValue">1.0</span>
+                            </div>
+                            <button onclick="adjustSaturation()" class="btn">Anwenden</button>
+                        </div>
+
+                        <!-- Zuschneiden -->
+                        <div class="tool-section">
+                            <h3>✂️ Zuschneiden</h3>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label>Links:</label>
+                                    <input type="number" id="cropLeft" min="0" value="0">
+                                </div>
+                                <div class="input-group">
+                                    <label>Oben:</label>
+                                    <input type="number" id="cropTop" min="0" value="0">
+                                </div>
+                            </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label>Rechts:</label>
+                                    <input type="number" id="cropRight" min="0">
+                                </div>
+                                <div class="input-group">
+                                    <label>Unten:</label>
+                                    <input type="number" id="cropBottom" min="0">
+                                </div>
+                            </div>
+                            <button onclick="crop()" class="btn">Zuschneiden</button>
+                        </div>
+
+                        <!-- Aktionen -->
+                        <div class="tool-section actions">
+                            <h3>💾 Aktionen</h3>
+                            <button onclick="resetImage()" class="btn btn-secondary">↩ Zurücksetzen</button>
+                            <button onclick="newImage()" class="btn btn-secondary">📁 Neues Bild</button>
+                            
+                            <div class="input-group">
+                                <label>Format:</label>
+                                <select id="downloadFormat">
+                                    <option value="png">PNG</option>
+                                    <option value="jpeg">JPEG</option>
+                                    <option value="webp">WebP</option>
+                                </select>
+                            </div>
+                            <div class="input-group" id="qualityGroup">
+                                <label>Qualität:</label>
+                                <input type="range" id="downloadQuality" min="1" max="100" value="95">
+                                <span id="qualityValue">95</span>
+                            </div>
+                            <button onclick="downloadImage()" class="btn btn-primary">⬇ Herunterladen</button>
+                        </div>
+                    </aside>
+
+                    <!-- Bildvorschau -->
+                    <div class="preview-area">
+                        <div class="image-info" id="imageInfo">
+                            <span id="imageName">-</span>
+                            <span id="imageDimensions">-</span>
+                        </div>
+                        <div class="image-container">
+                            <img id="previewImage" src="" alt="Vorschau">
+                        </div>
+                        
+                        <!-- Bildergalerie -->
+                        <div class="gallery-section">
+                            <div class="gallery-header">
+                                <h3>🖼️ Hochgeladene Bilder</h3>
+                                <button onclick="addMoreImages()" class="btn btn-small btn-add">➕ Mehr hinzufügen</button>
+                                <input type="file" id="addFileInput" accept="image/*" multiple hidden>
+                            </div>
+                            <div id="gallery" class="gallery"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Verarbeite...</p>
+        </div>
+
+        <!-- Fehler-Toast -->
+        <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+services:
+  bildwerkzeug:
+    build: .
+    container_name: bildwerkzeug
+    restart: unless-stopped
+    ports:
+      - "5050:5000"
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-change-this-in-production}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@localhost}
+      - DATABASE_URL=sqlite:////app/data/bildwerkzeug.db
+      - MAX_UPLOAD_MB=50
+      - SESSION_LIFETIME_HOURS=24
+    volumes:
+      - bildwerkzeug_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5050/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  bildwerkzeug_data:
