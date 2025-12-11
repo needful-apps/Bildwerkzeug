@@ -1,124 +1,152 @@
 # 🖼️ Bildwerkzeug
 
-Ein einfaches, webbasiertes Bildbearbeitungstool mit Drag & Drop Funktionalität und Nutzerverwaltung.
+A simple, web-based image editing tool with drag & drop functionality and optional user management.
 
-## Features
+![Bildwerkzeug Screenshot](bildwerkzeug_github_frame.png)
 
-- **🔐 Login-System** - Sichere Authentifizierung mit Admin-Bereich
-- **👥 Nutzerverwaltung** - Admin kann Benutzer anlegen, bearbeiten und löschen
-- **📁 Drag & Drop Upload** - Mehrere Bilder gleichzeitig hochladen
-- **📐 Größe ändern** - Pixel, Prozent oder maximale Dateigröße
-- **🔄 Drehen & Spiegeln** - 90°, -90°, 180° Rotation und Spiegeln
-- **🎨 Filter** - Graustufen, Weichzeichnen, Schärfen
-- **⚡ Anpassungen** - Helligkeit, Kontrast, Sättigung
-- **✂️ Zuschneiden** - Bilder auf gewünschten Bereich beschneiden
-- **💾 Export** - Download in PNG, JPEG oder WebP Format
-- **🐳 Docker-ready** - Einfaches Deployment mit Docker
+## ✨ Features
 
-## Schnellstart mit Docker
+- **📁 Drag & Drop Upload** - Upload multiple images at once
+- **📐 Resize** - By pixels, percentage, or maximum file size
+- **🔄 Rotate & Flip** - 90°, -90°, 180° rotation and mirroring
+- **🎨 Filters** - Grayscale, blur, sharpen
+- **⚡ Adjustments** - Brightness, contrast, saturation
+- **✂️ Crop** - Crop images to desired area
+- **�� Batch Processing** - Edit all images at once
+- **💾 Export** - Download as PNG, JPEG, or WebP (single or ZIP)
+- **🔐 Optional Login** - Secure authentication with admin panel
+- **👥 User Management** - Admin can create and manage users
+- **🌐 Multilingual** - German and English
+- **🐳 Docker-ready** - Multi-arch images (amd64/arm64)
+
+## 🚀 Quick Start with Docker
 
 ```bash
-# Repository klonen
-git clone <repo-url>
-cd Bildwerkzeug
-
-# Mit Docker Compose starten
+# Start with Docker Compose
 docker compose up -d
 
-# Öffne http://localhost:5000
+# Open http://localhost:5050
 # Login: admin / admin123
 ```
 
-## Lokale Installation
+Or directly with Docker:
 
-1. **Python 3.8+** erforderlich
+```bash
+docker run -d \
+  -p 5050:5000 \
+  -e SECRET_KEY=your-secret-key \
+  -e ADMIN_PASSWORD=secure-password \
+  -v bildwerkzeug_data:/app/data \
+  -v bildwerkzeug_uploads:/app/uploads \
+  --name bildwerkzeug \
+  ghcr.io/needful-apps/bildwerkzeug:latest
+```
 
-2. **Virtuelle Umgebung erstellen:**
+## 💻 Local Installation
+
+1. **Python 3.8+** required
+
+2. **Clone repository:**
+   ```bash
+   git clone https://github.com/needful-apps/Bildwerkzeug.git
+   cd Bildwerkzeug
+   ```
+
+3. **Create virtual environment:**
    ```bash
    python3 -m venv venv
    source venv/bin/activate  # macOS/Linux
-   # oder: venv\Scripts\activate  # Windows
+   # or: venv\Scripts\activate  # Windows
    ```
 
-3. **Abhängigkeiten installieren:**
+4. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Umgebungsvariablen setzen (optional):**
-   ```bash
-   cp .env.example .env
-   # .env Datei bearbeiten
-   ```
-
-5. **Server starten:**
+5. **Start server:**
    ```bash
    python app.py
    ```
 
-6. **Browser öffnen:**
-   ```
-   http://localhost:5050
-   ```
+6. **Open browser:** [http://localhost:5056](http://localhost:5056)
 
-## Konfiguration
+## ⚙️ Configuration
 
-Umgebungsvariablen können in `.env` gesetzt werden:
+Environment variables can be set in `.env`:
 
-| Variable | Beschreibung | Standard |
-|----------|--------------|----------|
+| Variable | Description | Default |
+|----------|-------------|---------|
 | `SECRET_KEY` | Flask Secret Key | `dev-secret-key-...` |
-| `ADMIN_USERNAME` | Admin Benutzername | `admin` |
-| `ADMIN_PASSWORD` | Admin Passwort | `admin` |
-| `ADMIN_EMAIL` | Admin E-Mail | `admin@localhost` |
-| `DATABASE_URL` | Datenbank URI | `sqlite:///bildwerkzeug.db` |
-| `MAX_UPLOAD_MB` | Max Upload-Größe | `50` |
-| `SESSION_LIFETIME_HOURS` | Session Dauer | `24` |
+| `LOGIN_REQUIRED` | Require login? | `true` |
+| `ADMIN_USERNAME` | Admin username | `admin` |
+| `ADMIN_PASSWORD` | Admin password | `admin` |
+| `ADMIN_EMAIL` | Admin email | `admin@localhost` |
+| `DATABASE_URL` | Database URI | `sqlite:///bildwerkzeug.db` |
+| `MAX_UPLOAD_MB` | Max upload size (MB) | `50` |
+| `SESSION_LIFETIME_HOURS` | Session duration (hours) | `24` |
 
-## Projektstruktur
+### Anonymous Mode
+
+For public use without login:
+
+```bash
+LOGIN_REQUIRED=false
+```
+
+Images are then stored temporarily per browser session and automatically deleted after 24 hours.
+
+## 📁 Project Structure
 
 ```
 Bildwerkzeug/
-├── app.py              # Flask Backend
-├── config.py           # Konfiguration
-├── models.py           # Datenbankmodelle
-├── requirements.txt    # Python Abhängigkeiten
-├── Dockerfile          # Docker Image
-├── docker-compose.yml  # Docker Compose
-├── .env.example        # Beispiel Umgebungsvariablen
+├── app.py                 # Flask Backend
+├── config.py              # Configuration
+├── models.py              # Database models
+├── requirements.txt       # Python dependencies
+├── Dockerfile             # Docker image
+├── docker-compose.yml     # Docker Compose
+├── .env.example           # Example environment variables
 ├── templates/
-│   ├── index.html      # Hauptseite
-│   ├── login.html      # Login-Seite
-│   └── admin.html      # Admin-Panel
+│   ├── index.html         # Main page (Editor)
+│   ├── login.html         # Login page
+│   └── admin.html         # Admin panel
 └── static/
-    ├── style.css       # CSS Styles
-    └── script.js       # JavaScript Frontend
+    ├── style.css          # CSS Styles
+    ├── script.js          # JavaScript Frontend
+    ├── translations.js    # Translations (DE/EN)
+    └── favicon.ico        # Favicon
 ```
 
-## Docker Build
+## 🐳 Docker
+
+### Image from GitHub Container Registry
 
 ```bash
-# Image bauen
-docker build -t bildwerkzeug .
+# Pull latest image
+docker pull ghcr.io/needful-apps/bildwerkzeug:latest
 
-# Container starten
-docker run -d \
-  -p 5000:5000 \
-  -e SECRET_KEY=your-secret-key \
-  -e ADMIN_PASSWORD=secure-password \
-  -v bildwerkzeug_data:/app/data \
-  --name bildwerkzeug \
-  bildwerkzeug
+# For ARM (Raspberry Pi, Apple Silicon)
+docker pull ghcr.io/needful-apps/bildwerkzeug:latest --platform linux/arm64
 ```
 
-## Technologien
+### Build locally
 
-- **Backend:** Python, Flask, Flask-Login, Flask-SQLAlchemy
-- **Datenbank:** SQLite
-- **Bildverarbeitung:** Pillow (PIL)
-- **Frontend:** HTML5, CSS3, Vanilla JavaScript
-- **Deployment:** Docker, Gunicorn
+```bash
+docker build -t bildwerkzeug .
+```
 
-## Lizenz
+## 🛠️ Technologies
+
+| Area | Technology |
+|------|------------|
+| Backend | Python, Flask, Flask-Login, Flask-SQLAlchemy |
+| Database | SQLite |
+| Image Processing | Pillow (PIL) |
+| Frontend | HTML5, CSS3, Vanilla JavaScript |
+| Deployment | Docker, Gunicorn |
+| CI/CD | GitHub Actions |
+
+## 📄 License
 
 MIT License

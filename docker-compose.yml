@@ -1,6 +1,8 @@
 services:
   bildwerkzeug:
-    build: .
+    image: ghcr.io/needful-apps/bildwerkzeug:latest
+    # Alternativ lokal bauen:
+    # build: .
     container_name: bildwerkzeug
     restart: unless-stopped
     ports:
@@ -14,10 +16,12 @@ services:
       - DATABASE_URL=sqlite:////app/data/bildwerkzeug.db
       - MAX_UPLOAD_MB=50
       - SESSION_LIFETIME_HOURS=24
+      - LOGIN_REQUIRED=${LOGIN_REQUIRED:-true}
     volumes:
       - bildwerkzeug_data:/app/data
+      - bildwerkzeug_uploads:/app/uploads
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5050/login"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/login"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -25,3 +29,4 @@ services:
 
 volumes:
   bildwerkzeug_data:
+  bildwerkzeug_uploads:
