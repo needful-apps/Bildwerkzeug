@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Bildwerkzeug</title>
+    <title>Admin - ImageTool</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         .admin-container {
@@ -342,29 +342,33 @@
 <body>
     <div class="admin-container">
         <header class="admin-header">
-            <h1>⚙️ Admin-Panel</h1>
+            <h1 data-i18n="adminPanel">⚙️ Admin Panel</h1>
             <nav class="admin-nav">
-                <a href="{{ url_for('index') }}">← Zurück zum Editor</a>
-                <a href="{{ url_for('logout') }}">Abmelden</a>
+                <div class="lang-switcher">
+                    <button class="lang-btn" data-lang="en" onclick="setAdminLanguage('en')">EN</button>
+                    <button class="lang-btn" data-lang="de" onclick="setAdminLanguage('de')">DE</button>
+                </div>
+                <a href="{{ url_for('index') }}" data-i18n="backToEditor">← Back to Editor</a>
+                <a href="{{ url_for('logout') }}" data-i18n="logout">Logout</a>
             </nav>
         </header>
         
         <section class="users-section">
             <div class="section-header">
-                <h2>👥 Benutzerverwaltung</h2>
-                <button class="btn-add-user" onclick="openModal('add')">+ Neuer Benutzer</button>
+                <h2 data-i18n="userManagement">👥 User Management</h2>
+                <button class="btn-add-user" onclick="openModal('add')" data-i18n="newUser">+ New User</button>
             </div>
             
             <table class="users-table">
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Benutzername</th>
-                        <th>E-Mail</th>
-                        <th>Rolle</th>
-                        <th>Status</th>
-                        <th>Letzter Login</th>
-                        <th>Aktionen</th>
+                        <th data-i18n="username">Username</th>
+                        <th data-i18n="email">Email</th>
+                        <th data-i18n="role">Role</th>
+                        <th data-i18n="status">Status</th>
+                        <th data-i18n="lastLogin">Last Login</th>
+                        <th data-i18n="actionsCol">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="usersTableBody">
@@ -378,7 +382,7 @@
     <div id="userModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle">Neuer Benutzer</h3>
+                <h3 id="modalTitle" data-i18n="newUser">New User</h3>
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
             
@@ -386,39 +390,39 @@
                 <input type="hidden" id="userId">
                 
                 <div class="form-group">
-                    <label for="formUsername">Benutzername</label>
+                    <label for="formUsername" data-i18n="username">Username</label>
                     <input type="text" id="formUsername" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="formEmail">E-Mail</label>
+                    <label for="formEmail" data-i18n="email">Email</label>
                     <input type="email" id="formEmail" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="formPassword">Passwort <span id="passwordHint">(mindestens 4 Zeichen)</span></label>
+                    <label for="formPassword"><span data-i18n="password">Password</span> <span id="passwordHint" data-i18n="passwordHint">(minimum 4 characters)</span></label>
                     <input type="password" id="formPassword">
                 </div>
                 
                 <div class="form-group">
                     <div class="checkbox-row">
                         <input type="checkbox" id="formIsAdmin">
-                        <label for="formIsAdmin">Administrator</label>
+                        <label for="formIsAdmin" data-i18n="administrator">Administrator</label>
                     </div>
                 </div>
                 
                 <div class="form-group">
                     <div class="checkbox-row">
                         <input type="checkbox" id="formIsActive" checked>
-                        <label for="formIsActive">Aktiv</label>
+                        <label for="formIsActive" data-i18n="active">Active</label>
                     </div>
                 </div>
                 
                 <div id="formError" class="error-message hidden"></div>
                 
                 <div class="modal-actions">
-                    <button type="button" class="btn-cancel" onclick="closeModal()">Abbrechen</button>
-                    <button type="submit" class="btn-save">Speichern</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal()" data-i18n="cancel">Cancel</button>
+                    <button type="submit" class="btn-save" data-i18n="save">Save</button>
                 </div>
             </form>
         </div>
@@ -428,11 +432,133 @@
     <div id="toast" class="toast hidden"></div>
     
     <script>
+        // ==================== INTERNATIONALIZATION ====================
+        const LANG_KEY = 'bildwerkzeug_lang';
+        let currentLang = 'en';
+        
+        const adminTranslations = {
+            en: {
+                adminPanel: '⚙️ Admin Panel',
+                backToEditor: '← Back to Editor',
+                logout: 'Logout',
+                userManagement: '👥 User Management',
+                newUser: '+ New User',
+                username: 'Username',
+                email: 'Email',
+                role: 'Role',
+                status: 'Status',
+                lastLogin: 'Last Login',
+                actionsCol: 'Actions',
+                admin: 'Admin',
+                user: 'User',
+                active: 'Active',
+                inactive: 'Inactive',
+                never: 'Never',
+                edit: 'Edit',
+                delete: 'Delete',
+                editUser: 'Edit User',
+                password: 'Password',
+                passwordHint: '(minimum 4 characters)',
+                passwordHintEdit: '(leave empty to keep unchanged)',
+                administrator: 'Administrator',
+                cancel: 'Cancel',
+                save: 'Save',
+                confirmDelete: 'Really delete user?',
+                passwordRequired: 'Password is required',
+                errorOccurred: 'An error occurred',
+                networkError: 'Network error',
+                userCreated: 'User created',
+                userUpdated: 'User updated',
+                userDeleted: 'User deleted',
+                loadError: 'Error loading users',
+                deleteError: 'Error deleting'
+            },
+            de: {
+                adminPanel: '⚙️ Admin-Panel',
+                backToEditor: '← Zurück zum Editor',
+                logout: 'Abmelden',
+                userManagement: '👥 Benutzerverwaltung',
+                newUser: '+ Neuer Benutzer',
+                username: 'Benutzername',
+                email: 'E-Mail',
+                role: 'Rolle',
+                status: 'Status',
+                lastLogin: 'Letzter Login',
+                actionsCol: 'Aktionen',
+                admin: 'Admin',
+                user: 'Benutzer',
+                active: 'Aktiv',
+                inactive: 'Inaktiv',
+                never: 'Nie',
+                edit: 'Bearbeiten',
+                delete: 'Löschen',
+                editUser: 'Benutzer bearbeiten',
+                password: 'Passwort',
+                passwordHint: '(mindestens 4 Zeichen)',
+                passwordHintEdit: '(leer lassen um nicht zu ändern)',
+                administrator: 'Administrator',
+                cancel: 'Abbrechen',
+                save: 'Speichern',
+                confirmDelete: 'Benutzer wirklich löschen?',
+                passwordRequired: 'Passwort ist erforderlich',
+                errorOccurred: 'Ein Fehler ist aufgetreten',
+                networkError: 'Netzwerkfehler',
+                userCreated: 'Benutzer erstellt',
+                userUpdated: 'Benutzer aktualisiert',
+                userDeleted: 'Benutzer gelöscht',
+                loadError: 'Fehler beim Laden der Benutzer',
+                deleteError: 'Fehler beim Löschen'
+            }
+        };
+        
+        function t(key) {
+            return adminTranslations[currentLang][key] || adminTranslations['en'][key] || key;
+        }
+        
+        function setAdminLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem(LANG_KEY, lang);
+            applyAdminTranslations();
+            updateAdminLanguageButtons();
+            renderUsers(); // Re-render table with new language
+        }
+        
+        function applyAdminTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (adminTranslations[currentLang][key]) {
+                    el.textContent = adminTranslations[currentLang][key];
+                }
+            });
+        }
+        
+        function updateAdminLanguageButtons() {
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === currentLang);
+            });
+        }
+        
+        function loadAdminLanguage() {
+            const savedLang = localStorage.getItem(LANG_KEY);
+            if (savedLang && adminTranslations[savedLang]) {
+                currentLang = savedLang;
+            } else {
+                const browserLang = navigator.language.split('-')[0];
+                currentLang = adminTranslations[browserLang] ? browserLang : 'en';
+            }
+        }
+        
+        // ==================== USER MANAGEMENT ====================
         let users = [];
         let editingUserId = null;
         
         // Beim Laden Benutzer abrufen
-        document.addEventListener('DOMContentLoaded', loadUsers);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAdminLanguage();
+            applyAdminTranslations();
+            updateAdminLanguageButtons();
+            loadUsers();
+        });
         
         async function loadUsers() {
             try {
@@ -444,23 +570,25 @@
                     renderUsers();
                 }
             } catch (error) {
-                showToast('Fehler beim Laden der Benutzer', 'error');
+                showToast(t('loadError'), 'error');
             }
         }
         
         function renderUsers() {
             const tbody = document.getElementById('usersTableBody');
+            const dateLocale = currentLang === 'de' ? 'de-DE' : 'en-US';
+            
             tbody.innerHTML = users.map(user => `
                 <tr>
                     <td>${user.id}</td>
                     <td>${user.username}</td>
                     <td>${user.email}</td>
-                    <td><span class="badge ${user.is_admin ? 'badge-admin' : 'badge-user'}">${user.is_admin ? 'Admin' : 'Benutzer'}</span></td>
-                    <td><span class="badge ${user.is_active ? 'badge-active' : 'badge-inactive'}">${user.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
-                    <td>${user.last_login ? new Date(user.last_login).toLocaleString('de-DE') : 'Nie'}</td>
+                    <td><span class="badge ${user.is_admin ? 'badge-admin' : 'badge-user'}">${user.is_admin ? t('admin') : t('user')}</span></td>
+                    <td><span class="badge ${user.is_active ? 'badge-active' : 'badge-inactive'}">${user.is_active ? t('active') : t('inactive')}</span></td>
+                    <td>${user.last_login ? new Date(user.last_login).toLocaleString(dateLocale) : t('never')}</td>
                     <td class="action-btns">
-                        <button class="btn-edit" onclick="openModal('edit', ${user.id})">Bearbeiten</button>
-                        <button class="btn-delete" onclick="deleteUser(${user.id})">Löschen</button>
+                        <button class="btn-edit" onclick="openModal('edit', ${user.id})">${t('edit')}</button>
+                        <button class="btn-delete" onclick="deleteUser(${user.id})">${t('delete')}</button>
                     </td>
                 </tr>
             `).join('');
@@ -479,14 +607,14 @@
             document.getElementById('formIsActive').checked = true;
             
             if (mode === 'add') {
-                title.textContent = 'Neuer Benutzer';
+                title.textContent = t('newUser');
                 passwordInput.required = true;
-                passwordHint.textContent = '(mindestens 4 Zeichen)';
+                passwordHint.textContent = t('passwordHint');
                 editingUserId = null;
             } else {
-                title.textContent = 'Benutzer bearbeiten';
+                title.textContent = t('editUser');
                 passwordInput.required = false;
-                passwordHint.textContent = '(leer lassen um nicht zu ändern)';
+                passwordHint.textContent = t('passwordHintEdit');
                 editingUserId = userId;
                 
                 // Benutzer-Daten laden
@@ -538,7 +666,7 @@
                 } else {
                     // Neu erstellen (Passwort erforderlich)
                     if (!password) {
-                        errorEl.textContent = 'Passwort ist erforderlich';
+                        errorEl.textContent = t('passwordRequired');
                         errorEl.classList.remove('hidden');
                         return;
                     }
@@ -554,19 +682,19 @@
                 if (data.success) {
                     closeModal();
                     loadUsers();
-                    showToast(editingUserId ? 'Benutzer aktualisiert' : 'Benutzer erstellt', 'success');
+                    showToast(editingUserId ? t('userUpdated') : t('userCreated'), 'success');
                 } else {
-                    errorEl.textContent = data.error || 'Ein Fehler ist aufgetreten';
+                    errorEl.textContent = data.error || t('errorOccurred');
                     errorEl.classList.remove('hidden');
                 }
             } catch (error) {
-                errorEl.textContent = 'Netzwerkfehler';
+                errorEl.textContent = t('networkError');
                 errorEl.classList.remove('hidden');
             }
         }
         
         async function deleteUser(userId) {
-            if (!confirm('Benutzer wirklich löschen?')) return;
+            if (!confirm(t('confirmDelete'))) return;
             
             try {
                 const response = await fetch(`/api/admin/users/${userId}`, {
@@ -577,12 +705,12 @@
                 
                 if (data.success) {
                     loadUsers();
-                    showToast('Benutzer gelöscht', 'success');
+                    showToast(t('userDeleted'), 'success');
                 } else {
-                    showToast(data.error || 'Fehler beim Löschen', 'error');
+                    showToast(data.error || t('deleteError'), 'error');
                 }
             } catch (error) {
-                showToast('Netzwerkfehler', 'error');
+                showToast(t('networkError'), 'error');
             }
         }
         

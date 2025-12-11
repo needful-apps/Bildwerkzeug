@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Bildwerkzeug</title>
+    <title>Login - ImageTool</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         .login-container {
@@ -39,6 +40,36 @@
         
         .login-header p {
             color: var(--text-muted);
+        }
+        
+        .login-lang-switcher {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .login-lang-switcher .lang-btn {
+            padding: 8px 16px;
+            border: 2px solid var(--border);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .login-lang-switcher .lang-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--text);
+        }
+        
+        .login-lang-switcher .lang-btn.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
         }
         
         .login-form .input-group {
@@ -138,9 +169,14 @@
 <body>
     <div class="login-container">
         <div class="login-box">
+            <div class="login-lang-switcher">
+                <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">English</button>
+                <button class="lang-btn" data-lang="de" onclick="setLanguage('de')">Deutsch</button>
+            </div>
+            
             <div class="login-header">
-                <h1>🖼️ Bildwerkzeug</h1>
-                <p>Bitte melde dich an</p>
+                <h1 data-i18n="appTitle">🖼️ ImageTool</h1>
+                <p data-i18n="loginSubtitle">Please log in</p>
             </div>
             
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -155,23 +191,33 @@
             
             <form class="login-form" method="POST">
                 <div class="input-group">
-                    <label for="username">Benutzername</label>
+                    <label for="username" data-i18n="username">Username</label>
                     <input type="text" id="username" name="username" required autofocus>
                 </div>
                 
                 <div class="input-group">
-                    <label for="password">Passwort</label>
+                    <label for="password" data-i18n="password">Password</label>
                     <input type="password" id="password" name="password" required>
                 </div>
                 
                 <div class="checkbox-group">
                     <input type="checkbox" id="remember" name="remember">
-                    <label for="remember">Angemeldet bleiben</label>
+                    <label for="remember" data-i18n="rememberMe">Remember me</label>
                 </div>
                 
-                <button type="submit" class="btn-login">Anmelden</button>
+                <button type="submit" class="btn-login" data-i18n="loginBtn">Login</button>
             </form>
         </div>
     </div>
+    
+    <script src="{{ url_for('static', filename='translations.js') }}"></script>
+    <script>
+        // Initialize login page
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLanguage();
+            applyTranslations();
+            updateLanguageButtons();
+        });
+    </script>
 </body>
 </html>

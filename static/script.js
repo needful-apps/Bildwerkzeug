@@ -1,6 +1,6 @@
-// Bildwerkzeug - JavaScript
+// Bildwerkzeug - JavaScript mit Server-Speicherung
 
-// DOM Elemente
+// ==================== DOM ELEMENTE ====================
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
 const editor = document.getElementById('editor');
@@ -8,27 +8,212 @@ const previewImage = document.getElementById('previewImage');
 const loading = document.getElementById('loading');
 const toast = document.getElementById('toast');
 
-// Bildinfo
+// ==================== STATUS ====================
 let currentWidth = 0;
 let currentHeight = 0;
 let originalWidth = 0;
 let originalHeight = 0;
+let uploadedImages = [];  // {id, filename, width, height}
+let currentImageId = null;
+let currentImageData = null;  // Base64 des aktuellen Bildes (vom Server geladen)
 
-// Multi-Image Verwaltung
-let uploadedImages = [];  // Liste aller Bilder {id, filename, thumbnail}
-let currentImageId = null;  // ID des aktuell ausgewählten Bildes
+// ==================== SERVER API ====================
 
-// Initialisierung
+async function loadImagesFromServer() {
+    try {
+        const response = await fetch('/api/images');
+        const data = await response.json();
+        
+        if (data.success && data.images && data.images.length > 0) {
+            return {
+                images: data.images,
+                currentId: data.current_id
+            };
+        }
+    } catch (e) {
+        console.error('Error loading from server:', e);
+    }
+    return null;
+}
+
+async function uploadImageToServer(imageData, filename) {
+    const response = await fetch('/api/images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imageData, filename })
+    });
+    return await response.json();
+}
+
+async function getImageFromServer(imageId) {
+    const response = await fetch(`/api/images/${imageId}`);
+    return await response.json();
+}
+
+async function deleteImageFromServer(imageId) {
+    const response = await fetch(`/api/images/${imageId}`, {
+        method: 'DELETE'
+    });
+    return await response.json();
+}
+
+async function clearAllImagesFromServer() {
+    const response = await fetch('/api/images/clear', {
+        method: 'DELETE'
+    });
+    return await response.json();
+}
+
+async function setCurrentImageOnServer(imageId) {
+    const response = await fetch('/api/images/current', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_id: imageId })
+    });
+    return await response.json();
+}
+
+// ==================== INITIALISIERUNG ====================
+
+async function checkForSavedImages() {
+    // Erst alles verstecken während wir laden
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const dropzoneEl = document.getElementById('dropzone');
+    const editorEl = document.getElementById('editor');
+    
+    welcomeScreen.classList.add('hidden');
+    dropzoneEl.classList.add('hidden');
+    editorEl.classList.add('hidden');
+    
+    showLoading(true);
+    
+    try {
+        const serverData = await loadImagesFromServer();
+        
+        showLoading(false);
+        
+        if (serverData && serverData.images.length > 0) {
+            // Es gibt gespeicherte Bilder - Welcome Screen anzeigen
+            showWelcomeScreen(serverData.images);
+            return true;
+        } else {
+            // Keine gespeicherten Bilder - Dropzone anzeigen
+            showDropzone();
+            return false;
+        }
+    } catch (e) {
+        console.error('Error checking for saved images:', e);
+        showLoading(false);
+        showDropzone();
+        return false;
+    }
+}
+
+function showWelcomeScreen(savedImages) {
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const dropzoneEl = document.getElementById('dropzone');
+    const editorEl = document.getElementById('editor');
+    
+    welcomeScreen.classList.remove('hidden');
+    dropzoneEl.classList.add('hidden');
+    editorEl.classList.add('hidden');
+    
+    // Vorschau der gespeicherten Bilder anzeigen
+    const previewContainer = document.getElementById('savedImagesPreview');
+    previewContainer.innerHTML = '';
+    
+    const maxPreview = 4;
+    const imagesToShow = savedImages.slice(0, maxPreview);
+    
+    imagesToShow.forEach(img => {
+        const imgEl = document.createElement('img');
+        imgEl.src = `/api/images/${img.id}/thumbnail`;
+        imgEl.alt = img.filename;
+        imgEl.title = img.filename;
+        previewContainer.appendChild(imgEl);
+    });
+    
+    // Wenn mehr Bilder vorhanden sind, "+X weitere" anzeigen
+    if (savedImages.length > maxPreview) {
+        const moreEl = document.createElement('div');
+        moreEl.className = 'saved-images-count';
+        moreEl.textContent = `+${savedImages.length - maxPreview} ${t('moreImages')}`;
+        previewContainer.appendChild(moreEl);
+    }
+    
+    // Übersetzungen auf den Welcome-Screen anwenden
+    applyTranslations();
+}
+
+async function startNewSession() {
+    showLoading(true);
+    await clearAllImagesFromServer();
+    uploadedImages = [];
+    currentImageId = null;
+    currentImageData = null;
+    showLoading(false);
+    showDropzone();
+}
+
+async function continueSession() {
+    showLoading(true);
+    
+    const serverData = await loadImagesFromServer();
+    
+    if (serverData && serverData.images.length > 0) {
+        uploadedImages = serverData.images;
+        currentImageId = serverData.currentId || serverData.images[0].id;
+        
+        // Aktuelles Bild laden
+        const imageData = await getImageFromServer(currentImageId);
+        if (imageData.success) {
+            currentImageData = imageData.image;
+            const currentImg = uploadedImages.find(img => img.id === currentImageId);
+            if (currentImg) {
+                currentImg.imageData = imageData.image;
+                showEditor(currentImg);
+            }
+        }
+        console.log(t('loaded'), uploadedImages.length, t('imagesFromStorage'));
+    } else {
+        showDropzone();
+    }
+    
+    showLoading(false);
+}
+
+function showDropzone() {
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const dropzoneEl = document.getElementById('dropzone');
+    const editorEl = document.getElementById('editor');
+    
+    welcomeScreen.classList.add('hidden');
+    dropzoneEl.classList.remove('hidden');
+    editorEl.classList.add('hidden');
+}
+
+// ==================== INITIALISIERUNG ====================
+
 document.addEventListener('DOMContentLoaded', () => {
+    loadLanguage();
+    applyTranslations();
+    updateLanguageButtons();
     setupDropzone();
     setupSliders();
     setupAspectRatio();
     setupAddMoreInput();
+    
+    // Prüfen ob gespeicherte Bilder vorhanden sind
+    checkForSavedImages().then(hasSaved => {
+        if (!hasSaved) {
+            console.log(t('noSavedImages'));
+        }
+    });
 });
 
-// Dropzone Setup
+// ==================== DROPZONE ====================
+
 function setupDropzone() {
-    // Drag & Drop Events
     dropzone.addEventListener('dragover', (e) => {
         e.preventDefault();
         dropzone.classList.add('dragover');
@@ -42,97 +227,632 @@ function setupDropzone() {
         e.preventDefault();
         dropzone.classList.remove('dragover');
         
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            uploadFiles(files);
+        if (e.dataTransfer.files.length > 0) {
+            handleFiles(e.dataTransfer.files);
         }
     });
 
-    // Klick zum Auswählen
     dropzone.addEventListener('click', () => {
         fileInput.click();
     });
 
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
-            uploadFiles(e.target.files);
+            handleFiles(e.target.files);
         }
     });
 }
 
-// Weitere Bilder hinzufügen Setup
 function setupAddMoreInput() {
     const addInput = document.getElementById('addFileInput');
     if (addInput) {
         addInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                uploadFiles(e.target.files, true);  // true = zu bestehenden hinzufügen
+                handleFiles(e.target.files, true);
             }
         });
     }
 }
 
-// Button für weitere Bilder
 function addMoreImages() {
     document.getElementById('addFileInput').click();
 }
 
-// Slider Updates
-function setupSliders() {
-    // Blur Slider
-    const blurSlider = document.getElementById('blurRadius');
-    blurSlider.addEventListener('input', () => {
-        document.getElementById('blurValue').textContent = blurSlider.value;
-    });
+// ==================== DATEI-HANDLING ====================
 
-    // Sharpen Slider
-    const sharpenSlider = document.getElementById('sharpenFactor');
-    sharpenSlider.addEventListener('input', () => {
-        document.getElementById('sharpenValue').textContent = sharpenSlider.value;
-    });
-
-    // Brightness Slider
-    const brightnessSlider = document.getElementById('brightness');
-    brightnessSlider.addEventListener('input', () => {
-        document.getElementById('brightnessValue').textContent = parseFloat(brightnessSlider.value).toFixed(1);
-    });
-
-    // Contrast Slider
-    const contrastSlider = document.getElementById('contrast');
-    contrastSlider.addEventListener('input', () => {
-        document.getElementById('contrastValue').textContent = parseFloat(contrastSlider.value).toFixed(1);
-    });
-
-    // Saturation Slider
-    const saturationSlider = document.getElementById('saturation');
-    saturationSlider.addEventListener('input', () => {
-        document.getElementById('saturationValue').textContent = parseFloat(saturationSlider.value).toFixed(1);
-    });
-
-    // Quality Slider
-    const qualitySlider = document.getElementById('downloadQuality');
-    qualitySlider.addEventListener('input', () => {
-        document.getElementById('qualityValue').textContent = qualitySlider.value;
-    });
+async function handleFiles(files, append = false) {
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
     
-    // Scale Percent Slider
-    const scalePercentSlider = document.getElementById('scalePercent');
-    if (scalePercentSlider) {
-        scalePercentSlider.addEventListener('input', () => {
-            document.getElementById('scalePercentValue').textContent = scalePercentSlider.value;
-        });
+    if (imageFiles.length === 0) {
+        showToast(t('onlyImageFiles'), 'error');
+        return;
+    }
+
+    showLoading(true);
+
+    try {
+        const newImages = [];
+        
+        for (const file of imageFiles) {
+            try {
+                const imageData = await readFileAsBase64(file);
+                
+                // Bild auf Server hochladen
+                const result = await uploadImageToServer(imageData, file.name);
+                
+                if (result.success) {
+                    newImages.push({
+                        ...result.image,
+                        imageData: imageData  // Für sofortige Anzeige
+                    });
+                }
+            } catch (e) {
+                console.error('Fehler bei Datei:', file.name, e);
+            }
+        }
+        
+        if (newImages.length === 0) {
+            showToast(t('noValidImages'), 'error');
+            showLoading(false);
+            return;
+        }
+        
+        if (append) {
+            uploadedImages = [...uploadedImages, ...newImages];
+            updateGallery();
+            showToast(`${newImages.length} ${t('imagesAdded')}`, 'success');
+        } else {
+            uploadedImages = newImages;
+            currentImageId = newImages[0].id;
+            currentImageData = newImages[0].imageData;
+            showEditor(newImages[0]);
+        }
+        
+    } catch (error) {
+        showToast(t('uploadError') + error.message, 'error');
+    }
+
+    showLoading(false);
+}
+
+function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// ==================== EDITOR ====================
+
+function showEditor(imgData) {
+    // Alle anderen Ansichten verstecken
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    if (welcomeScreen) welcomeScreen.classList.add('hidden');
+    dropzone.classList.add('hidden');
+    editor.classList.remove('hidden');
+
+    currentImageId = imgData.id;
+    
+    // Bild anzeigen
+    if (imgData.imageData) {
+        previewImage.src = imgData.imageData;
+        currentImageData = imgData.imageData;
+    } else if (currentImageData) {
+        previewImage.src = currentImageData;
     }
     
-    // Max Size Quality Slider
-    const maxSizeQualitySlider = document.getElementById('maxSizeQuality');
-    if (maxSizeQualitySlider) {
-        maxSizeQualitySlider.addEventListener('input', () => {
-            document.getElementById('maxSizeQualityValue').textContent = maxSizeQualitySlider.value;
+    document.getElementById('imageName').textContent = imgData.filename;
+    updateDimensions(imgData.width, imgData.height);
+
+    originalWidth = imgData.width;
+    originalHeight = imgData.height;
+
+    document.getElementById('resizeWidth').value = imgData.width;
+    document.getElementById('resizeHeight').value = imgData.height;
+    document.getElementById('cropRight').value = imgData.width;
+    document.getElementById('cropBottom').value = imgData.height;
+    
+    updateGallery();
+}
+
+function updateGallery() {
+    const gallery = document.getElementById('gallery');
+    gallery.innerHTML = '';
+    
+    uploadedImages.forEach(img => {
+        const item = document.createElement('div');
+        item.className = 'gallery-item' + (img.id === currentImageId ? ' active' : '');
+        item.onclick = () => selectImage(img.id);
+        
+        item.innerHTML = `
+            <img src="/api/images/${img.id}/thumbnail" alt="${img.filename}">
+            <button class="remove-btn" onclick="event.stopPropagation(); removeImage('${img.id}')">×</button>
+            <span class="filename">${img.filename}</span>
+        `;
+        
+        gallery.appendChild(item);
+    });
+}
+
+async function selectImage(imageId) {
+    if (imageId === currentImageId) return;
+    
+    showLoading(true);
+    
+    const imgData = uploadedImages.find(img => img.id === imageId);
+    if (imgData) {
+        // Bild vom Server laden
+        const imageData = await getImageFromServer(imageId);
+        if (imageData.success) {
+            currentImageId = imageId;
+            currentImageData = imageData.image;
+            imgData.imageData = imageData.image;
+            imgData.width = imageData.width;
+            imgData.height = imageData.height;
+            
+            previewImage.src = imageData.image;
+            document.getElementById('imageName').textContent = imgData.filename;
+            updateDimensions(imageData.width, imageData.height);
+            
+            originalWidth = imageData.width;
+            originalHeight = imageData.height;
+            document.getElementById('resizeWidth').value = imageData.width;
+            document.getElementById('resizeHeight').value = imageData.height;
+            
+            updateGallery();
+            resetSliders();
+            
+            // Aktuelles Bild auf Server setzen
+            await setCurrentImageOnServer(imageId);
+        }
+    }
+    
+    showLoading(false);
+}
+
+async function removeImage(imageId) {
+    showLoading(true);
+    
+    const result = await deleteImageFromServer(imageId);
+    
+    if (result.success) {
+        uploadedImages = uploadedImages.filter(img => img.id !== imageId);
+        
+        if (uploadedImages.length === 0) {
+            showLoading(false);
+            newImage();
+            return;
+        }
+        
+        if (currentImageId === imageId) {
+            // Neues aktuelles Bild laden
+            const newCurrentId = result.current_id || uploadedImages[0].id;
+            await selectImage(newCurrentId);
+        } else {
+            updateGallery();
+        }
+        
+        showToast(t('imageRemoved'), 'success');
+    }
+    
+    showLoading(false);
+}
+
+function updateDimensions(width, height) {
+    currentWidth = width;
+    currentHeight = height;
+    document.getElementById('imageDimensions').textContent = `${width} × ${height} px`;
+    document.getElementById('cropRight').value = width;
+    document.getElementById('cropBottom').value = height;
+}
+
+// ==================== BILDBEARBEITUNG ====================
+
+async function processImage(operation, params = {}) {
+    if (!currentImageId) {
+        showToast(t('uploadFirst'), 'error');
+        return;
+    }
+    
+    showLoading(true);
+
+    try {
+        if (operation === 'reset') {
+            // Reset über Server-API
+            const response = await fetch(`/api/images/${currentImageId}/reset`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                currentImageData = data.image;
+                previewImage.src = data.image;
+                updateDimensions(data.width, data.height);
+                
+                // Lokale Daten aktualisieren
+                const currentImg = uploadedImages.find(img => img.id === currentImageId);
+                if (currentImg) {
+                    currentImg.width = data.width;
+                    currentImg.height = data.height;
+                    currentImg.imageData = data.image;
+                }
+                
+                updateGallery();
+                showToast(t('resetSuccess'), 'success');
+            } else {
+                showToast(data.error || t('processingError'), 'error');
+            }
+        } else {
+            // Normale Operation mit image_id an Server senden
+            const response = await fetch('/api/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    image_id: currentImageId,
+                    operation, 
+                    params 
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                currentImageData = data.image;
+                previewImage.src = data.image;
+                updateDimensions(data.width, data.height);
+                
+                // Lokale Daten aktualisieren
+                const currentImg = uploadedImages.find(img => img.id === currentImageId);
+                if (currentImg) {
+                    currentImg.width = data.width;
+                    currentImg.height = data.height;
+                    currentImg.imageData = data.image;
+                }
+                
+                updateGallery();
+                
+                let message = t('applySuccess');
+                if (data.file_size_kb) {
+                    message = `${t('compressedTo')}${data.file_size_kb.toFixed(1)} KB`;
+                    document.getElementById('currentSizeInfo').textContent = 
+                        `${t('newSize')} ${data.width}×${data.height} px, ~${data.file_size_kb.toFixed(1)} KB`;
+                }
+                showToast(message, 'success');
+            } else {
+                showToast(data.error || t('processingError'), 'error');
+            }
+        }
+    } catch (error) {
+        showToast(t('networkError') + error.message, 'error');
+    }
+
+    showLoading(false);
+}
+
+// ==================== BATCH-VERARBEITUNG ====================
+
+async function applyToAllImages(operation, params = {}) {
+    if (uploadedImages.length === 0) {
+        showToast(t('noImagesLoaded'), 'error');
+        return;
+    }
+    
+    if (uploadedImages.length === 1) {
+        processImage(operation, params);
+        return;
+    }
+    
+    showLoading(true);
+    
+    try {
+        const imageIds = uploadedImages.map(img => img.id);
+        
+        const response = await fetch('/api/process_batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_ids: imageIds, operation, params })
         });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Lokale Daten aktualisieren
+            data.results.forEach(result => {
+                const img = uploadedImages.find(i => i.id === result.id);
+                if (img) {
+                    img.width = result.width;
+                    img.height = result.height;
+                    // imageData wird beim nächsten Laden aktualisiert
+                    delete img.imageData;
+                }
+            });
+            
+            // Aktuelles Bild neu laden
+            const imageData = await getImageFromServer(currentImageId);
+            if (imageData.success) {
+                currentImageData = imageData.image;
+                previewImage.src = imageData.image;
+                updateDimensions(imageData.width, imageData.height);
+            }
+            
+            updateGallery();
+            showToast(`${data.processed} ${t('batchSuccess')}`, 'success');
+        } else {
+            showToast(data.error || t('batchError'), 'error');
+        }
+    } catch (error) {
+        showToast(t('networkError') + error.message, 'error');
+    }
+    
+    showLoading(false);
+}
+
+// ==================== AKTIONEN ====================
+
+function resize() {
+    const width = parseInt(document.getElementById('resizeWidth').value);
+    const height = parseInt(document.getElementById('resizeHeight').value);
+    const keepAspect = document.getElementById('keepAspect').checked;
+
+    if (width <= 0 || height <= 0) {
+        showToast(t('invalidValues'), 'error');
+        return;
+    }
+
+    processImage('resize', { width, height, keep_aspect: keepAspect });
+}
+
+function resizeByPercent() {
+    const percent = parseInt(document.getElementById('scalePercent').value);
+    
+    if (percent <= 0) {
+        showToast(t('invalidPercent'), 'error');
+        return;
+    }
+    
+    processImage('resize_percent', { percent });
+}
+
+function resizeToMaxSize() {
+    const maxSizeMB = parseFloat(document.getElementById('maxFileSizeMB').value);
+    const format = document.getElementById('maxSizeFormat').value;
+    const quality = parseInt(document.getElementById('maxSizeQuality').value);
+    
+    if (maxSizeMB <= 0) {
+        showToast(t('invalidFileSize'), 'error');
+        return;
+    }
+    
+    processImage('resize_max_size', { max_size_mb: maxSizeMB, format, quality });
+}
+
+function rotate(angle) {
+    processImage('rotate', { angle });
+}
+
+function flip(direction) {
+    processImage(direction === 'horizontal' ? 'flip_horizontal' : 'flip_vertical');
+}
+
+function applyFilter(filter) {
+    processImage(filter);
+}
+
+function blur() {
+    const radius = parseFloat(document.getElementById('blurRadius').value);
+    processImage('blur', { radius });
+}
+
+function sharpen() {
+    const factor = parseFloat(document.getElementById('sharpenFactor').value);
+    processImage('sharpen', { factor });
+}
+
+function adjustBrightness() {
+    const factor = parseFloat(document.getElementById('brightness').value);
+    processImage('brightness', { factor });
+}
+
+function adjustContrast() {
+    const factor = parseFloat(document.getElementById('contrast').value);
+    processImage('contrast', { factor });
+}
+
+function adjustSaturation() {
+    const factor = parseFloat(document.getElementById('saturation').value);
+    processImage('saturation', { factor });
+}
+
+function crop() {
+    const left = parseInt(document.getElementById('cropLeft').value) || 0;
+    const top = parseInt(document.getElementById('cropTop').value) || 0;
+    const right = parseInt(document.getElementById('cropRight').value) || currentWidth;
+    const bottom = parseInt(document.getElementById('cropBottom').value) || currentHeight;
+
+    if (left >= right || top >= bottom) {
+        showToast(t('invalidCropValues'), 'error');
+        return;
+    }
+
+    processImage('crop', { left, top, right, bottom });
+}
+
+function resetImage() {
+    processImage('reset');
+    resetSliders();
+}
+
+async function newImage() {
+    showLoading(true);
+    await clearAllImagesFromServer();
+    uploadedImages = [];
+    currentImageId = null;
+    currentImageData = null;
+    editor.classList.add('hidden');
+    dropzone.classList.remove('hidden');
+    fileInput.value = '';
+    showLoading(false);
+}
+
+// ==================== BATCH-AKTIONEN ====================
+
+function batchResize() {
+    const width = parseInt(document.getElementById('resizeWidth').value);
+    const height = parseInt(document.getElementById('resizeHeight').value);
+    const keepAspect = document.getElementById('keepAspect').checked;
+    if (width <= 0 || height <= 0) { showToast(t('invalidValues'), 'error'); return; }
+    applyToAllImages('resize', { width, height, keep_aspect: keepAspect });
+}
+
+function batchResizeByPercent() {
+    const percent = parseInt(document.getElementById('scalePercent').value);
+    if (percent <= 0) { showToast(t('invalidPercent'), 'error'); return; }
+    applyToAllImages('resize_percent', { percent });
+}
+
+function batchResizeToMaxSize() {
+    const maxSizeMB = parseFloat(document.getElementById('maxFileSizeMB').value);
+    const format = document.getElementById('maxSizeFormat').value;
+    const quality = parseInt(document.getElementById('maxSizeQuality').value);
+    if (maxSizeMB <= 0) { showToast(t('invalidFileSize'), 'error'); return; }
+    applyToAllImages('resize_max_size', { max_size_mb: maxSizeMB, format, quality });
+}
+
+function batchRotate(angle) { applyToAllImages('rotate', { angle }); }
+function batchFlip(direction) { applyToAllImages(direction === 'horizontal' ? 'flip_horizontal' : 'flip_vertical'); }
+function batchApplyFilter(filter) { applyToAllImages(filter); }
+function batchBlur() { applyToAllImages('blur', { radius: parseFloat(document.getElementById('blurRadius').value) }); }
+function batchSharpen() { applyToAllImages('sharpen', { factor: parseFloat(document.getElementById('sharpenFactor').value) }); }
+function batchAdjustBrightness() { applyToAllImages('brightness', { factor: parseFloat(document.getElementById('brightness').value) }); }
+function batchAdjustContrast() { applyToAllImages('contrast', { factor: parseFloat(document.getElementById('contrast').value) }); }
+function batchAdjustSaturation() { applyToAllImages('saturation', { factor: parseFloat(document.getElementById('saturation').value) }); }
+
+// ==================== DOWNLOAD ====================
+
+async function downloadImage() {
+    if (!currentImageId || !currentImageData) {
+        showToast(t('noImageToDownload'), 'error');
+        return;
+    }
+    
+    const currentImg = uploadedImages.find(img => img.id === currentImageId);
+    if (!currentImg) return;
+    
+    const format = document.getElementById('downloadFormat').value;
+    const quality = document.getElementById('downloadQuality').value;
+    
+    try {
+        const response = await fetch('/api/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                image: currentImageData,
+                filename: currentImg.filename,
+                format,
+                quality: parseInt(quality)
+            })
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentImg.filename.replace(/\.[^.]+$/, '') + '_edited.' + format;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } else {
+            showToast(t('downloadError'), 'error');
+        }
+    } catch (error) {
+        showToast(t('networkError') + error.message, 'error');
     }
 }
 
-// Seitenverhältnis beibehalten
+async function downloadAllImages() {
+    if (uploadedImages.length === 0) {
+        showToast(t('noImageToDownload'), 'error');
+        return;
+    }
+    
+    const format = document.getElementById('downloadFormat').value;
+    const quality = document.getElementById('downloadQuality').value;
+    
+    showLoading(true);
+    
+    try {
+        // Alle Bilder vom Server laden
+        const imagesToDownload = [];
+        for (const img of uploadedImages) {
+            const imageData = await getImageFromServer(img.id);
+            if (imageData.success) {
+                imagesToDownload.push({
+                    filename: img.filename,
+                    image: imageData.image
+                });
+            }
+        }
+        
+        const response = await fetch('/api/download_zip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                images: imagesToDownload,
+                format,
+                quality: parseInt(quality)
+            })
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'images_edited.zip';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`${uploadedImages.length} ${t('imagesDownloaded')}`, 'success');
+        } else {
+            showToast(t('downloadError'), 'error');
+        }
+    } catch (error) {
+        showToast(t('networkError') + error.message, 'error');
+    }
+    
+    showLoading(false);
+}
+
+// ==================== UI HELPERS ====================
+
+function setupSliders() {
+    const sliders = [
+        { id: 'blurRadius', display: 'blurValue' },
+        { id: 'sharpenFactor', display: 'sharpenValue' },
+        { id: 'brightness', display: 'brightnessValue', decimals: 1 },
+        { id: 'contrast', display: 'contrastValue', decimals: 1 },
+        { id: 'saturation', display: 'saturationValue', decimals: 1 },
+        { id: 'downloadQuality', display: 'qualityValue' },
+        { id: 'scalePercent', display: 'scalePercentValue' },
+        { id: 'maxSizeQuality', display: 'maxSizeQualityValue' }
+    ];
+    
+    sliders.forEach(({ id, display, decimals }) => {
+        const slider = document.getElementById(id);
+        if (slider) {
+            slider.addEventListener('input', () => {
+                const value = decimals ? parseFloat(slider.value).toFixed(decimals) : slider.value;
+                document.getElementById(display).textContent = value;
+            });
+        }
+    });
+}
+
 function setupAspectRatio() {
     const widthInput = document.getElementById('resizeWidth');
     const heightInput = document.getElementById('resizeHeight');
@@ -153,429 +873,44 @@ function setupAspectRatio() {
     });
 }
 
-// Dateien hochladen (mehrere)
-async function uploadFiles(files, append = false) {
-    // Nur Bilddateien filtern
-    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
-    
-    if (imageFiles.length === 0) {
-        showToast('Bitte nur Bilddateien hochladen!', 'error');
-        return;
-    }
-
-    showLoading(true);
-
-    const formData = new FormData();
-    imageFiles.forEach(file => {
-        formData.append('files[]', file);
-    });
-
-    try {
-        const response = await fetch('/upload', {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            if (append) {
-                // Neue Bilder zu bestehenden hinzufügen
-                uploadedImages = [...uploadedImages, ...data.images];
-                updateGallery();
-                showToast(`${data.images.length} Bild(er) hinzugefügt!`, 'success');
-            } else {
-                // Neue Upload-Session
-                uploadedImages = data.images;
-                showEditor(data.current);
-            }
-        } else {
-            showToast(data.error || 'Fehler beim Hochladen', 'error');
-        }
-    } catch (error) {
-        showToast('Netzwerkfehler: ' + error.message, 'error');
-    }
-
-    showLoading(false);
-}
-
-// Editor anzeigen
-function showEditor(data) {
-    dropzone.classList.add('hidden');
-    editor.classList.remove('hidden');
-
-    currentImageId = data.id;
-    previewImage.src = data.image;
-    document.getElementById('imageName').textContent = data.filename;
-    updateDimensions(data.width, data.height);
-
-    // Originalgrößen speichern
-    originalWidth = data.width;
-    originalHeight = data.height;
-
-    // Resize-Felder setzen
-    document.getElementById('resizeWidth').value = data.width;
-    document.getElementById('resizeHeight').value = data.height;
-
-    // Crop-Felder setzen
-    document.getElementById('cropRight').value = data.width;
-    document.getElementById('cropBottom').value = data.height;
-    
-    // Galerie aktualisieren
-    updateGallery();
-}
-
-// Galerie aktualisieren
-function updateGallery() {
-    const gallery = document.getElementById('gallery');
-    gallery.innerHTML = '';
-    
-    uploadedImages.forEach(img => {
-        const item = document.createElement('div');
-        item.className = 'gallery-item' + (img.id === currentImageId ? ' active' : '');
-        item.onclick = () => selectImage(img.id);
-        
-        item.innerHTML = `
-            <img src="${img.thumbnail}" alt="${img.filename}">
-            <button class="remove-btn" onclick="event.stopPropagation(); removeImage('${img.id}')">×</button>
-            <span class="filename">${img.filename}</span>
-        `;
-        
-        gallery.appendChild(item);
-    });
-}
-
-// Bild aus Galerie auswählen
-async function selectImage(imageId) {
-    if (imageId === currentImageId) return;
-    
-    showLoading(true);
-    
-    try {
-        const response = await fetch(`/select/${imageId}`, {
-            method: 'POST'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            currentImageId = data.id;
-            previewImage.src = data.image;
-            document.getElementById('imageName').textContent = data.filename;
-            updateDimensions(data.width, data.height);
-            
-            originalWidth = data.width;
-            originalHeight = data.height;
-            document.getElementById('resizeWidth').value = data.width;
-            document.getElementById('resizeHeight').value = data.height;
-            
-            updateGallery();
-            resetSliders();
-        } else {
-            showToast(data.error || 'Fehler beim Auswählen', 'error');
-        }
-    } catch (error) {
-        showToast('Netzwerkfehler: ' + error.message, 'error');
-    }
-    
-    showLoading(false);
-}
-
-// Bild entfernen
-async function removeImage(imageId) {
-    try {
-        const response = await fetch(`/remove/${imageId}`, {
-            method: 'DELETE'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            // Aus lokaler Liste entfernen
-            uploadedImages = uploadedImages.filter(img => img.id !== imageId);
-            
-            if (data.newCurrent) {
-                // Neues aktuelles Bild anzeigen
-                currentImageId = data.newCurrent.id;
-                previewImage.src = data.newCurrent.image;
-                document.getElementById('imageName').textContent = data.newCurrent.filename;
-                updateDimensions(data.newCurrent.width, data.newCurrent.height);
-                originalWidth = data.newCurrent.width;
-                originalHeight = data.newCurrent.height;
-            } else if (uploadedImages.length === 0) {
-                // Keine Bilder mehr - zurück zur Dropzone
-                newImage();
-                return;
-            }
-            
-            updateGallery();
-            showToast('Bild entfernt', 'success');
-        }
-    } catch (error) {
-        showToast('Fehler: ' + error.message, 'error');
-    }
-}
-
-// Slider zurücksetzen
 function resetSliders() {
-    document.getElementById('brightness').value = 1;
-    document.getElementById('brightnessValue').textContent = '1.0';
-    document.getElementById('contrast').value = 1;
-    document.getElementById('contrastValue').textContent = '1.0';
-    document.getElementById('saturation').value = 1;
-    document.getElementById('saturationValue').textContent = '1.0';
-    document.getElementById('blurRadius').value = 2;
-    document.getElementById('blurValue').textContent = '2';
-    document.getElementById('sharpenFactor').value = 2;
-    document.getElementById('sharpenValue').textContent = '2';
-}
-
-// Dimensionen aktualisieren
-function updateDimensions(width, height) {
-    currentWidth = width;
-    currentHeight = height;
-    document.getElementById('imageDimensions').textContent = `${width} × ${height} px`;
+    const defaults = {
+        'brightness': 1, 'contrast': 1, 'saturation': 1,
+        'blurRadius': 2, 'sharpenFactor': 2
+    };
+    const displays = {
+        'brightness': 'brightnessValue', 'contrast': 'contrastValue', 
+        'saturation': 'saturationValue', 'blurRadius': 'blurValue', 
+        'sharpenFactor': 'sharpenValue'
+    };
     
-    // Crop-Felder aktualisieren
-    document.getElementById('cropRight').value = width;
-    document.getElementById('cropBottom').value = height;
+    Object.entries(defaults).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+        const disp = document.getElementById(displays[id]);
+        if (disp) disp.textContent = value === 1 ? '1.0' : value;
+    });
 }
 
-// Bildoperation ausführen
-async function processImage(operation, params = {}) {
-    showLoading(true);
-
-    try {
-        const response = await fetch('/process', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ operation, params })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            previewImage.src = data.image;
-            updateDimensions(data.width, data.height);
-            showToast('Erfolgreich angewendet!', 'success');
-        } else {
-            showToast(data.error || 'Fehler bei der Verarbeitung', 'error');
-        }
-    } catch (error) {
-        showToast('Netzwerkfehler: ' + error.message, 'error');
-    }
-
-    showLoading(false);
-}
-
-// Größe ändern
-function resize() {
-    const width = parseInt(document.getElementById('resizeWidth').value);
-    const height = parseInt(document.getElementById('resizeHeight').value);
-    const keepAspect = document.getElementById('keepAspect').checked;
-
-    if (width <= 0 || height <= 0) {
-        showToast('Bitte gültige Werte eingeben!', 'error');
-        return;
-    }
-
-    processImage('resize', { width, height, keep_aspect: keepAspect });
-}
-
-// Resize Tab wechseln
 function switchResizeTab(tab) {
-    // Alle Tabs deaktivieren
     document.querySelectorAll('.resize-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.resize-content').forEach(c => c.classList.remove('active'));
-    
-    // Ausgewählten Tab aktivieren
     event.target.classList.add('active');
-    
-    if (tab === 'pixel') {
-        document.getElementById('resizePixel').classList.add('active');
-    } else if (tab === 'percent') {
-        document.getElementById('resizePercent').classList.add('active');
-    } else if (tab === 'maxsize') {
-        document.getElementById('resizeMaxSize').classList.add('active');
-    }
+    document.getElementById('resize' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
 }
 
-// Prozent Preset setzen
 function setScalePercent(value) {
     document.getElementById('scalePercent').value = value;
     document.getElementById('scalePercentValue').textContent = value;
 }
 
-// Resize nach Prozent
-function resizeByPercent() {
-    const percent = parseInt(document.getElementById('scalePercent').value);
-    
-    if (percent <= 0) {
-        showToast('Bitte gültigen Prozentwert eingeben!', 'error');
-        return;
-    }
-    
-    processImage('resize_percent', { percent });
-}
-
-// Resize auf maximale Dateigröße
-async function resizeToMaxSize() {
-    const maxSizeMB = parseFloat(document.getElementById('maxFileSizeMB').value);
-    const format = document.getElementById('maxSizeFormat').value;
-    const quality = parseInt(document.getElementById('maxSizeQuality').value);
-    
-    if (maxSizeMB <= 0) {
-        showToast('Bitte gültige Dateigröße eingeben!', 'error');
-        return;
-    }
-    
-    showLoading(true);
-    
-    try {
-        const response = await fetch('/process', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-                operation: 'resize_max_size', 
-                params: { 
-                    max_size_mb: maxSizeMB,
-                    format: format,
-                    quality: quality
-                } 
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            previewImage.src = data.image;
-            updateDimensions(data.width, data.height);
-            
-            // Info anzeigen
-            const infoEl = document.getElementById('currentSizeInfo');
-            if (data.file_size_kb) {
-                infoEl.textContent = `Neue Größe: ${data.width}×${data.height} px, ~${data.file_size_kb.toFixed(1)} KB`;
-            }
-            
-            showToast('Erfolgreich komprimiert!', 'success');
-        } else {
-            showToast(data.error || 'Fehler bei der Verarbeitung', 'error');
-        }
-    } catch (error) {
-        showToast('Netzwerkfehler: ' + error.message, 'error');
-    }
-    
-    showLoading(false);
-}
-
-// Drehen
-function rotate(angle) {
-    processImage('rotate', { angle });
-}
-
-// Spiegeln
-function flip(direction) {
-    const operation = direction === 'horizontal' ? 'flip_horizontal' : 'flip_vertical';
-    processImage(operation);
-}
-
-// Filter anwenden
-function applyFilter(filter) {
-    processImage(filter);
-}
-
-// Weichzeichnen
-function blur() {
-    const radius = parseFloat(document.getElementById('blurRadius').value);
-    processImage('blur', { radius });
-}
-
-// Schärfen
-function sharpen() {
-    const factor = parseFloat(document.getElementById('sharpenFactor').value);
-    processImage('sharpen', { factor });
-}
-
-// Helligkeit
-function adjustBrightness() {
-    const factor = parseFloat(document.getElementById('brightness').value);
-    processImage('brightness', { factor });
-}
-
-// Kontrast
-function adjustContrast() {
-    const factor = parseFloat(document.getElementById('contrast').value);
-    processImage('contrast', { factor });
-}
-
-// Sättigung
-function adjustSaturation() {
-    const factor = parseFloat(document.getElementById('saturation').value);
-    processImage('saturation', { factor });
-}
-
-// Zuschneiden
-function crop() {
-    const left = parseInt(document.getElementById('cropLeft').value) || 0;
-    const top = parseInt(document.getElementById('cropTop').value) || 0;
-    const right = parseInt(document.getElementById('cropRight').value) || currentWidth;
-    const bottom = parseInt(document.getElementById('cropBottom').value) || currentHeight;
-
-    if (left >= right || top >= bottom) {
-        showToast('Ungültige Zuschnittswerte!', 'error');
-        return;
-    }
-
-    processImage('crop', { left, top, right, bottom });
-}
-
-// Zurücksetzen
-function resetImage() {
-    processImage('reset');
-    resetSliders();
-}
-
-// Neues Bild
-function newImage() {
-    editor.classList.add('hidden');
-    dropzone.classList.remove('hidden');
-    fileInput.value = '';
-    uploadedImages = [];
-    currentImageId = null;
-}
-
-// Bild herunterladen
-function downloadImage() {
-    const format = document.getElementById('downloadFormat').value;
-    const quality = document.getElementById('downloadQuality').value;
-    
-    window.location.href = `/download?format=${format}&quality=${quality}&id=${currentImageId}`;
-}
-
-// Loading anzeigen/verstecken
 function showLoading(show) {
-    if (show) {
-        loading.classList.remove('hidden');
-    } else {
-        loading.classList.add('hidden');
-    }
+    loading.classList.toggle('hidden', !show);
 }
 
-// Toast-Nachricht anzeigen
 function showToast(message, type = 'error') {
     toast.textContent = message;
-    toast.className = 'toast';
-    if (type === 'success') {
-        toast.classList.add('success');
-    }
-    
+    toast.className = 'toast' + (type === 'success' ? ' success' : '');
     toast.classList.remove('hidden');
-    
-    setTimeout(() => {
-        toast.classList.add('hidden');
-    }, 3000);
+    setTimeout(() => toast.classList.add('hidden'), 3000);
 }

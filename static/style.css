@@ -71,6 +71,37 @@ header p {
     gap: 15px;
 }
 
+/* Language Switcher */
+.lang-switcher {
+    display: flex;
+    gap: 5px;
+    background: var(--surface);
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.lang-btn {
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.lang-btn:hover {
+    color: var(--text);
+    background: var(--surface-light);
+}
+
+.lang-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
 .user-info {
     color: var(--text-muted);
     font-size: 0.9rem;
@@ -92,6 +123,24 @@ header p {
 .nav-link:hover {
     background: var(--surface-light);
     color: var(--primary-color);
+}
+
+/* Responsive Header Navigation */
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .header-nav {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+    
+    .lang-switcher {
+        order: -1; /* Sprache zuerst zeigen */
+    }
 }
 
 /* Dropzone */
@@ -451,6 +500,110 @@ header p {
     display: none !important;
 }
 
+/* Welcome Screen */
+.welcome-screen {
+    padding: 40px 20px;
+}
+
+.welcome-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.welcome-option {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 40px 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 3px solid transparent;
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
+}
+
+.welcome-option:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.2);
+}
+
+.welcome-option-existing {
+    border-color: var(--border);
+}
+
+.welcome-option-existing:hover {
+    border-color: var(--success-color);
+    box-shadow: 0 10px 40px rgba(40, 167, 69, 0.2);
+}
+
+.welcome-option-content {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.welcome-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 20px;
+}
+
+.welcome-option h3 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    color: var(--text);
+}
+
+.welcome-option p {
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+
+.saved-images-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.saved-images-preview img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+}
+
+.saved-images-count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: var(--surface-light);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+@media (max-width: 700px) {
+    .welcome-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .welcome-option {
+        min-height: auto;
+        padding: 30px 20px;
+    }
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
     width: 8px;
@@ -582,6 +735,64 @@ header p {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Button Row - für Anwenden + Batch nebeneinander */
+.button-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.button-row .btn {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.button-row .btn-batch {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 60px;
+}
+
+/* Batch Buttons */
+.btn-batch {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    font-size: 0.85rem;
+}
+
+.btn-batch:hover {
+    background: linear-gradient(135deg, #e080ea 0%, #e44a5f 100%);
+}
+
+/* Batch Section in Drehen/Spiegeln */
+.batch-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+}
+
+.batch-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.batch-section .button-group .btn-batch {
+    flex: 1;
+    min-width: 40px;
+}
+
+/* ZIP Download Button */
+.btn-zip {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    margin-top: 8px;
+}
+
+.btn-zip:hover {
+    background: linear-gradient(135deg, #0f8a7f 0%, #30d670 100%);
 }
 
 .dropzone-hint {
