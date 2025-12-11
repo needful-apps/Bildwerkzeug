@@ -737,7 +737,7 @@ header p {
     text-overflow: ellipsis;
 }
 
-/* Button Row - für Anwenden + Batch nebeneinander */
+/* Button Row - for Apply + Batch side by side */
 .button-row {
     display: flex;
     gap: 8px;

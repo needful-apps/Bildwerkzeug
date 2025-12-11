@@ -1,5 +1,5 @@
 """
-Bildwerkzeug - Datenbankmodelle
+Bildwerkzeug - Database models
 """
 
 from flask_sqlalchemy import SQLAlchemy
@@ -11,7 +11,7 @@ db = SQLAlchemy()
 
 
 class User(UserMixin, db.Model):
-    """Benutzer-Modell"""
+    """User model"""
     
     __tablename__ = 'users'
     
@@ -25,18 +25,18 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime)
     
     def set_password(self, password):
-        """Passwort hashen und speichern"""
+        """Hash and store password"""
         self.password_hash = generate_password_hash(password)
     
     def check_password(self, password):
-        """Passwort überprüfen"""
+        """Verify password"""
         return check_password_hash(self.password_hash, password)
     
     def __repr__(self):
         return f'<User {self.username}>'
     
     def to_dict(self):
-        """User als Dictionary (ohne Passwort)"""
+        """User as dictionary (without password)"""
         return {
             'id': self.id,
             'username': self.username,
@@ -49,15 +49,15 @@ class User(UserMixin, db.Model):
 
 
 def init_db(app):
-    """Datenbank initialisieren und Admin-User erstellen"""
+    """Initialize database and create admin user"""
     with app.app_context():
         db.create_all()
         
-        # Prüfen ob Admin existiert
+        # Check if admin exists
         admin = User.query.filter_by(username=app.config['ADMIN_USERNAME']).first()
         
         if not admin:
-            # Admin aus Konfiguration erstellen
+            # Create admin from configuration
             admin = User(
                 username=app.config['ADMIN_USERNAME'],
                 email=app.config['ADMIN_EMAIL'],
@@ -67,6 +67,6 @@ def init_db(app):
             admin.set_password(app.config['ADMIN_PASSWORD'])
             db.session.add(admin)
             db.session.commit()
-            print(f"✅ Admin-Benutzer '{app.config['ADMIN_USERNAME']}' erstellt")
+            print(f"✅ Admin user '{app.config['ADMIN_USERNAME']}' created")
         else:
-            print(f"ℹ️  Admin-Benutzer '{app.config['ADMIN_USERNAME']}' existiert bereits")
+            print(f"ℹ️  Admin user '{app.config['ADMIN_USERNAME']}' already exists")

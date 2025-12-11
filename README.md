@@ -149,4 +149,4 @@ docker build -t bildwerkzeug .
 
 ## 📄 License
 
-MIT License
+MIT License - see [LICENSE](LICENSE) for details.

@@ -372,13 +372,13 @@
                     </tr>
                 </thead>
                 <tbody id="usersTableBody">
-                    <!-- Wird per JavaScript gefüllt -->
+                    <!-- Populated via JavaScript -->
                 </tbody>
             </table>
         </section>
     </div>
     
-    <!-- Modal für Benutzer erstellen/bearbeiten -->
+    <!-- Modal for creating/editing users -->
     <div id="userModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -552,7 +552,7 @@
         let users = [];
         let editingUserId = null;
         
-        // Beim Laden Benutzer abrufen
+        // Load users on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadAdminLanguage();
             applyAdminTranslations();
@@ -600,7 +600,7 @@
             const passwordHint = document.getElementById('passwordHint');
             const passwordInput = document.getElementById('formPassword');
             
-            // Formular zurücksetzen
+            // Reset form
             document.getElementById('userForm').reset();
             document.getElementById('userId').value = '';
             document.getElementById('formError').classList.add('hidden');
@@ -617,7 +617,7 @@
                 passwordHint.textContent = t('passwordHintEdit');
                 editingUserId = userId;
                 
-                // Benutzer-Daten laden
+                // Load user data
                 const user = users.find(u => u.id === userId);
                 if (user) {
                     document.getElementById('userId').value = user.id;
@@ -657,14 +657,14 @@
             try {
                 let response;
                 if (editingUserId) {
-                    // Bearbeiten
+                    // Edit
                     response = await fetch(`/api/admin/users/${editingUserId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(userData)
                     });
                 } else {
-                    // Neu erstellen (Passwort erforderlich)
+                    // Create new (password required)
                     if (!password) {
                         errorEl.textContent = t('passwordRequired');
                         errorEl.classList.remove('hidden');

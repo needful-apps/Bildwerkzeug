@@ -1,35 +1,35 @@
 """
-Bildwerkzeug - Konfiguration
+Bildwerkzeug - Configuration
 
-Umgebungsvariablen können in .env Datei oder direkt gesetzt werden.
+Environment variables can be set in .env file or directly.
 """
 
 import os
 from dotenv import load_dotenv
 
-# .env Datei laden falls vorhanden
+# Load .env file if present
 load_dotenv()
 
 
 class Config:
-    """Basis-Konfiguration"""
+    """Base configuration"""
     
     # Flask
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     
-    # Login erforderlich? Wenn False, werden anonyme Sessions verwendet
+    # Login required? If False, anonymous sessions are used
     LOGIN_REQUIRED = os.environ.get('LOGIN_REQUIRED', 'true').lower() in ('true', '1', 'yes')
     
-    # Datenbank
+    # Database
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///bildwerkzeug.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Upload
     MAX_CONTENT_LENGTH = int(os.environ.get('MAX_UPLOAD_MB', 50)) * 1024 * 1024
     
-    # Admin-Benutzer (wird beim ersten Start erstellt falls nicht vorhanden)
+    # Admin user (created on first start if not present)
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
-    ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin')  # Sollte in Produktion geändert werden!
+    ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin')  # Should be changed in production!
     ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@localhost')
     
     # Session
@@ -37,24 +37,24 @@ class Config:
 
 
 class DevelopmentConfig(Config):
-    """Entwicklungs-Konfiguration"""
+    """Development configuration"""
     DEBUG = True
 
 
 class ProductionConfig(Config):
-    """Produktions-Konfiguration"""
+    """Production configuration"""
     DEBUG = False
     
-    # In Produktion muss SECRET_KEY gesetzt sein
+    # In production, SECRET_KEY must be set
     @property
     def SECRET_KEY(self):
         key = os.environ.get('SECRET_KEY')
         if not key:
-            raise ValueError("SECRET_KEY muss in Produktion gesetzt sein!")
+            raise ValueError("SECRET_KEY must be set in production!")
         return key
 
 
-# Konfiguration basierend auf Umgebung wählen
+# Choose configuration based on environment
 config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,

@@ -76,7 +76,7 @@ async function setCurrentImageOnServer(imageId) {
 // ==================== INITIALISIERUNG ====================
 
 async function checkForSavedImages() {
-    // Erst alles verstecken während wir laden
+    // First hide everything while loading
     const welcomeScreen = document.getElementById('welcomeScreen');
     const dropzoneEl = document.getElementById('dropzone');
     const editorEl = document.getElementById('editor');
@@ -141,7 +141,7 @@ function showWelcomeScreen(savedImages) {
         previewContainer.appendChild(moreEl);
     }
     
-    // Übersetzungen auf den Welcome-Screen anwenden
+    // Apply translations to welcome screen
     applyTranslations();
 }
 
@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupAspectRatio();
     setupAddMoreInput();
     
-    // Prüfen ob gespeicherte Bilder vorhanden sind
+    // Check if saved images exist
     checkForSavedImages().then(hasSaved => {
         if (!hasSaved) {
             console.log(t('noSavedImages'));
@@ -283,7 +283,7 @@ async function handleFiles(files, append = false) {
                 if (result.success) {
                     newImages.push({
                         ...result.image,
-                        imageData: imageData  // Für sofortige Anzeige
+                        imageData: imageData  // For immediate display
                     });
                 }
             } catch (e) {
@@ -460,7 +460,7 @@ async function processImage(operation, params = {}) {
 
     try {
         if (operation === 'reset') {
-            // Reset über Server-API
+            // Reset via server API
             const response = await fetch(`/api/images/${currentImageId}/reset`, {
                 method: 'POST'
             });
@@ -564,7 +564,7 @@ async function applyToAllImages(operation, params = {}) {
                 if (img) {
                     img.width = result.width;
                     img.height = result.height;
-                    // imageData wird beim nächsten Laden aktualisiert
+                    // imageData will be updated on next load
                     delete img.imageData;
                 }
             });
