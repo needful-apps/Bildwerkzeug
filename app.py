@@ -30,10 +30,12 @@ class AnonymousUser(AnonymousUserMixin):
     """Anonymous user for sessions without login"""
     
     def __init__(self):
-        self.id = None
         self.username = 'Anonymous'
         self.is_admin = False
-        self.is_active = True
+    
+    @property
+    def id(self):
+        return None
     
     @property
     def session_id(self):
