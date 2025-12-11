@@ -1,8 +1,6 @@
 services:
   bildwerkzeug:
     image: ghcr.io/needful-apps/bildwerkzeug:latest
-    # Alternativ lokal bauen:
-    # build: .
     container_name: bildwerkzeug
     restart: unless-stopped
     ports:
